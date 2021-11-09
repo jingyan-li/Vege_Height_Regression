@@ -19,7 +19,7 @@ def createDeepLabv3(outputchannels=1):
         model: Returns the DeepLabv3 model with the ResNet101 backbone.
     """
     model = models.segmentation.deeplabv3_resnet101(pretrained=True, progress=True)
-    model.conv1 = nn.Conv2d(4, 3, kernel_size=3, stride=1, padding=1, bias=False)
+    model.conv1 = nn.Conv2d(4, 64, kernel_size=7, stride=2, padding=3, bias=False)
     model.classifier = DeepLabHead(2048, outputchannels)
     # Set the model in training mode
     model.eval()
@@ -78,7 +78,7 @@ if __name__ == "__main__":
                                                shuffle=False)
 
     # Initialize models
-    model = createDeepLabv3(32)
+    model = MyModel()
 
     for x, y in tqdm(train_loader):
         print(x.shape)
