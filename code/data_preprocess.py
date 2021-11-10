@@ -32,29 +32,32 @@ if __name__ == "__main__":
 
     dset = h5py.File("../data/dataset_rgb_nir_train.hdf5","r")
     CLOUDNAME = "CLD_"
-    LAYERNAMES = ["INPT_","NIR_"]
+    LAYERNAMES = ["INPT","NIR"]
 
     # Copy GT to h5py
-    with h5py.File("../data/stacked_data_train.hdf5","w") as f:
+    with h5py.File("../data/data_train_rgbReduced.hdf5","w") as f:
         if "GT" not in f.keys():
             _ = f.create_dataset(f"GT", data=dset["GT"])
             del _
 
     # Apply cloud masks and stack 20 rotations into 1
-    for i in tqdm(range(1, 5)):
-        with h5py.File("../data/stacked_data_train.hdf5", "a") as f:
-            rgb_layer_name = f"{LAYERNAMES[0]}{i}"
-            nir_layer_name = f"{LAYERNAMES[1]}{i}"
-            if (rgb_layer_name not in f.keys()) or (nir_layer_name not in f.keys()):
+    with h5py.File("../data/data_train_rgbReduced.hdf5", "a") as f:
+        if (LAYERNAMES[0] not in f.keys()) or (LAYERNAMES[1] not in f.keys()):
+            rgb_avg_all = np.zeros(np.concatenate((dset["GT"].shape, [3])))
+            nir_avg_all = np.zeros(dset["GT"].shape)
+            for i in tqdm(range(1, 5)):
+                rgb_layer_name = f"{LAYERNAMES[0]}_{i}"
+                nir_layer_name = f"{LAYERNAMES[1]}_{i}"
                 cloud = dset[f"{CLOUDNAME}{i}"]
                 rgb = dset[rgb_layer_name]
                 nir = dset[nir_layer_name]
 
                 rgb_avg, nir_avg = remove_cloud(cloud, rgb, nir)
                 del cloud, rgb, nir
-
-                # Save into h5py
-                _ = f.create_dataset(rgb_layer_name, data=rgb_avg)
-                del _
-                _ = f.create_dataset(nir_layer_name, data=nir_avg)
-                del _
+                rgb_avg_all[i-1] = rgb_avg
+                nir_avg_all[i-1] = nir_avg
+            # Save into h5py
+            _ = f.create_dataset(LAYERNAMES[0], data=rgb_avg_all)
+            del _
+            _ = f.create_dataset(LAYERNAMES[1], data=nir_avg_all)
+            del _
