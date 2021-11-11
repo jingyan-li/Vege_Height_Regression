@@ -19,7 +19,7 @@ def remove_cloud(cloud, rgb, nir, CLOUD_THRESHOLD = 0):
         if np.sum(rgb[i] <= 1) / (rgb[0].shape[0] * rgb[0].shape[1]) > 0.2:
             ignored_rotation_idx.append(i)
     # Get preserved rotations
-    preserved_rotation_idx = [idx for idx in range(20) if idx not in ignored_rotation_idx]
+    preserved_rotation_idx = [idx for idx in range(20 ) if idx not in ignored_rotation_idx]
     print(f"Preserved rotations: {preserved_rotation_idx}")
     # Count no cloud rotations
     no_cld_freq = np.zeros((cloud.shape[1], cloud.shape[2]))
@@ -45,14 +45,16 @@ if __name__ == "__main__":
     LAYERNAMES = ["INPT","NIR"]
 
     # Copy GT to h5py
-    with h5py.File("../data/data_train_rgbReduced.hdf5","w") as f:
+    with h5py.File("../data/data_train_rgbReduced_delBlankRotations.hdf5","w") as f:
         if "GT" not in f.keys():
+            print("writing GT")
             _ = f.create_dataset(f"GT", data=dset["GT"])
             del _
 
     # Apply cloud masks and stack 20 rotations into 1
     with h5py.File("../data/data_train_rgbReduced_delBlankRotations.hdf5", "a") as f:
         if (LAYERNAMES[0] not in f.keys()) or (LAYERNAMES[1] not in f.keys()):
+            print("writing data")
             rgb_avg_all = np.zeros(np.concatenate((dset["GT"].shape, [3])))
             nir_avg_all = np.zeros(dset["GT"].shape)
             # For every image:

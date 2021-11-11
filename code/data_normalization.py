@@ -19,7 +19,7 @@ def normalize(af_inpt):
 
 
 if __name__=="__main__":
-    af_dset = h5py.File("../data/data_train_rgbReduced.hdf5", "r")
+    af_dset = h5py.File("../data/data_train_rgbReduced_delBlankRotations.hdf5", "r")
     print(af_dset.keys())
     rgb_avg_all = np.zeros(af_dset["INPT"].shape)
     nir_avg_all = np.zeros(af_dset["NIR"].shape)
