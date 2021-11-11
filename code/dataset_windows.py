@@ -31,26 +31,29 @@ class SatelliteSet(VisionDataset):
     def load_data(self):
         h5 = h5py.File(self.file_path, 'r')
 
-        self.RGB1 = h5["INPT_1"]
-        self.RGB2 = h5["INPT_2"]
-        self.RGB3 = h5["INPT_3"]
-        self.RGB4 = h5["INPT_4"]
-        self.RGB = np.concatenate([np.expand_dims(self.RGB1, axis=-1),
-                                   np.expand_dims(self.RGB2, axis=-1),
-                                   np.expand_dims(self.RGB3, axis=-1),
-                                   np.expand_dims(self.RGB4, axis=-1)
-                                   ], axis=-1)
-        self.RGB = np.transpose(self.RGB, [3, 0, 1, 2])  # 4*10980*10980*3
+        self.RGB = h5["INPT"]
 
-        self.NIR1 = h5["NIR_1"]
-        self.NIR2 = h5["NIR_2"]
-        self.NIR3 = h5["NIR_3"]
-        self.NIR4 = h5["NIR_4"]
-        self.NIR = np.concatenate([np.expand_dims(self.NIR1, axis=0),
-                                   np.expand_dims(self.NIR2, axis=0),
-                                   np.expand_dims(self.NIR3, axis=0),
-                                   np.expand_dims(self.NIR4, axis=0)
-                                   ], axis=0)  # 4*10980*10980
+        # self.RGB1 = h5["INPT_1"]
+        # self.RGB2 = h5["INPT_2"]
+        # self.RGB3 = h5["INPT_3"]
+        # self.RGB4 = h5["INPT_4"]
+        # self.RGB = np.concatenate([np.expand_dims(self.RGB1, axis=-1),
+        #                            np.expand_dims(self.RGB2, axis=-1),
+        #                            np.expand_dims(self.RGB3, axis=-1),
+        #                            np.expand_dims(self.RGB4, axis=-1)
+        #                            ], axis=-1)
+        # self.RGB = np.transpose(self.RGB, [3, 0, 1, 2])  # 4*10980*10980*3
+
+        self.NIR = h5["NIR"]
+        # self.NIR1 = h5["NIR_1"]
+        # self.NIR2 = h5["NIR_2"]
+        # self.NIR3 = h5["NIR_3"]
+        # self.NIR4 = h5["NIR_4"]
+        # self.NIR = np.concatenate([np.expand_dims(self.NIR1, axis=0),
+        #                            np.expand_dims(self.NIR2, axis=0),
+        #                            np.expand_dims(self.NIR3, axis=0),
+        #                            np.expand_dims(self.NIR4, axis=0)
+        #                            ], axis=0)  # 4*10980*10980
 
         self.GT = h5["GT"]  # 4*10980*10980
         self.has_data = True
@@ -75,8 +78,8 @@ class SatelliteSet(VisionDataset):
         GT_sample = self.GT[b, n:n + self.wsize, m:m + self.wsize]
 
         # normalize NIR and RGB by maximumg possible value
-        # NIR_sample = np.asarray(NIR_sample, np.float32) / (2 ** 16 - 1)
-        # RGB_sample = np.asarray(RGB_sample, np.float32) / (2 ** 8 - 1)
+        NIR_sample = np.asarray(NIR_sample, np.float32) / 16098
+        RGB_sample = np.asarray(RGB_sample, np.float32) / 18741
         # R = RGB_sample[:, :, 0]
         # G = RGB_sample[:, :, 1]
         # B = RGB_sample[:, :, 2]
