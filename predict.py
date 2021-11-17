@@ -81,10 +81,13 @@ def do_validation(model, dataloader):
 
 
 if __name__ == "__main__":
-    test_data = r"D:\II_LAB2_DATA\c32\data_features_c32_pic4.hdf5"
-    ckp_path = r""
-    pred_res_path = r""
     num_features = 16
+    regressor = "XGB"
+    imageIdx = 1
+    test_data = f"data/data_test_features_c{num_features}_pic{imageIdx}.hdf5"
+    ckp_path = f"checkpoints{num_features}/{regressor}_last.pkl"
+    pred_res_path = f"result/checkpoint{num_features}"
+
     BATCH_SIZE = 200
     test_dset = SatelliteSet(test_data,
                              num_feature=num_features,
@@ -117,14 +120,14 @@ if __name__ == "__main__":
      """
 
     # single file
-    ckp_path = r"D:\yurjia\ImageInterpretation_Regression\code\checkpoints32\XGB_checkpoint.pkl"
-    MODEL_TITLE = "XGB_32"
+    # ckp_path = r"D:\yurjia\ImageInterpretation_Regression\code\checkpoints32\XGB_checkpoint.pkl"
+    MODEL_TITLE = ckp_path.split("/")[-1].split(".")[0]+"-"+test_data.split("/")[-1].split(".")[0]
     print(MODEL_TITLE)
     with open(ckp_path, "rb") as file:
         reg = pickle.load(file)
     print("Finished model loading.")
     start = time.time()
-    if MODEL_TITLE[:3] == "XGB":
+    if regressor[:3] == "XGB":
         rmse, y_pred = do_validation_xgb(reg, test_loader)
     else:
         rmse, y_pred = do_validation(reg, test_loader)
