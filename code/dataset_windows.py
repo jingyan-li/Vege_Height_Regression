@@ -78,8 +78,10 @@ class SatelliteSet(VisionDataset):
         GT_sample = self.GT[b, n:n + self.wsize, m:m + self.wsize]
 
         # normalize NIR and RGB by maximumg possible value
-        NIR_sample = np.asarray(NIR_sample, np.float32) / 16098
-        RGB_sample = np.asarray(RGB_sample, np.float32) / 18741
+        NIR_sample = np.asarray(NIR_sample, np.float32)
+        RGB_sample = np.asarray(RGB_sample, np.float32)
+        #NIR_sample = np.asarray(NIR_sample, np.float32) / 16098
+        #RGB_sample = np.asarray(RGB_sample, np.float32) / 18741
         # R = RGB_sample[:, :, 0]
         # G = RGB_sample[:, :, 1]
         # B = RGB_sample[:, :, 2]

@@ -167,19 +167,16 @@ if __name__ == "__main__":
     # print(out.shape)
 
     # Parameters for loading data
-    TRAIN_PATH = '../data/data_train_rgbReduced.hdf5'
-    IMAGE_NUM = 1
+    TRAIN_PATH = '../data/data_test_rgbReduced_delBlankRotations_Standardized.hdf5'
+    IMAGE_NUM = 2
     WINDOWSIZE = 224
     # Sampling data
     SAMPLE = True
-    SAMPLESIZE = 0.1
+    SAMPLESIZE = 0.5
     # Batch size for train dataloader
     BATCH_SIZE = 128
     # Output features
-    OUTPUT_FEATURES = 16
-    # K-Fold Classification
-    KFOLD = 5
-
+    OUTPUT_FEATURES = 32
 
     # Set seed, so that results can be reproduced
     np.random.seed(2021)
@@ -192,7 +189,9 @@ if __name__ == "__main__":
     # Sampling
     if SAMPLE:
         print("Sampling...")
-        sampling = np.random.randint(len(train_dset), size=round(len(train_dset) * SAMPLESIZE))
+        #sampling = np.random.randint(len(train_dset), size=round(len(train_dset) * SAMPLESIZE)
+        length = round(len(train_dset) * SAMPLESIZE)
+        sampling = list(range(1*length, 2*length))
         train_dset = torch.utils.data.Subset(train_dset, sampling)
     print(f"TRAIN dataset contains {len(train_dset)} windows")
 
@@ -206,7 +205,7 @@ if __name__ == "__main__":
     print("Loading model...")
     model = Deeplabv3Resnet101(nc=OUTPUT_FEATURES, input_channel=4)
 
-    with h5py.File("../data/data_train_features_c16.hdf5", "a") as f:
+    with h5py.File("P:\pf\pfstud\II_jingyli\data_test_features_c32_pic2.hdf5", "a") as f:
         x_features = np.zeros((len(train_dset), OUTPUT_FEATURES, WINDOWSIZE, WINDOWSIZE))
         y_gt = np.zeros((len(train_dset), WINDOWSIZE, WINDOWSIZE))
         i = 0
@@ -214,11 +213,14 @@ if __name__ == "__main__":
             print(x.shape)
             print(y.shape)
             x_out = model(x)
+            del x
             print(x_out.shape)
-            x_out_array = x_out.detach().numpy()
-            x_features[i*BATCH_SIZE:(i+1)*BATCH_SIZE] = x_out_array
-            y_array = y.detach().numpy()
+            x_out = x_out.detach().numpy()
+            x_features[i*BATCH_SIZE:(i+1)*BATCH_SIZE] = x_out
+            del x_out
+            y = y.detach().numpy()
             y_gt[i*BATCH_SIZE:(i+1)*BATCH_SIZE] = y
+            del y
             i += 1
 
         _ = f.create_dataset("Features", data=x_features)
