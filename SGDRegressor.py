@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.linear_model import SGDRegressor
 import torch.utils.data
 import time
-from utils.DataPreprocess import standardize_data, get_pretrained_feature_from_h5, SatelliteSet
+from utils.DataPreprocess import standardize_data, get_pretrained_feature_from_h5, SatelliteSet, get_raw_feature_from_npfile
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
@@ -10,6 +10,7 @@ import os
 import pickle
 import math
 from sklearn.model_selection import GridSearchCV
+
 
 class SGDRegressorModel(object):
     def __init__(self):
@@ -32,37 +33,8 @@ class SGDRegressorModel(object):
         :param train_y: Training canopy height as a 1d Numpy array of shape(NUM_SAMPLESM,)
         """
         train_x = standardize_data(train_x)
-
         self.model.fit(train_x, train_y)
 
-    """
-    def cv_fit(self, train_x, train_y):
-        train_x = standardize_data(train_x)
-        cv_params = {'max_depth': [4, 6.8],
-                     'min_child_weight': [1, 3, 5, 7]}
-        self.model = xgb.XGBRegressor(learning_rate=0.1,
-                                      n_estimators=100,
-                                      silent=True,
-                                      objective='reg:squarederror',
-                                      nthread=-1,
-                                      gamma=0.1,
-                                      max_delta_step=0,
-                                      subsample=0.8,
-                                      colsample_bytree=0.8,
-                                      colsample_bylevel=1,
-                                      reg_alpha=1,
-                                      reg_lambda=1,
-                                      seed=2021,
-                                      missing=None)
-        gbm = GridSearchCV(self.model, param_grid=cv_params,
-                           scoring="neg_mean_squared_error",
-                           verbose=True)
-        gbm.fit(train_x, train_y)
-        print(gbm.cv_results_)
-        print(gbm.best_params_)
-        print(gbm.best_score_)
-
-    """
     def predict(self, x):
         """
         Predict the canopy height for a given set of images
@@ -127,8 +99,10 @@ def do_validation(model, dataloader):
     RMSE = math.sqrt(MSE / count)
     return RMSE
 
-def fit_once(h5_path, num_feature=16):
-    x_data, y_data = get_pretrained_feature_from_h5(h5_path, num_feature=num_feature)
+
+def fit_once(h5_path, num_feature=16, multiple=True):
+    CHECKPOINT_PATH = "checkpoints16_once"
+    x_data, y_data = get_pretrained_feature_from_h5(h5_path, num_feature=num_feature, multiple=multiple)
     x_train, x_val, y_train, y_val = train_test_split(x_data, y_data, train_size=0.8)
 
     model = SGDRegressorModel()
@@ -140,16 +114,19 @@ def fit_once(h5_path, num_feature=16):
     start = time.time()
     y_pred = model.predict(x_val)
     print(f"Finish predicting in {time.time() - start} seconds.")
+
     mae, rmse = model.evaluation(y_val, y_pred)
     print("Validation: MAE {}, RMSE {}".format(mae, rmse))
+    with open(os.path.join(CHECKPOINT_PATH, 'SGD.pkl'), 'wb') as f:
+        pickle.dump(model, f)
 
 
-def partial_fit(file_path,num_feature=16,multiple=False):
+def partial_fit(file_path, num_feature=16, multiple=False):
     CHECKPOINT_PATH = "checkpoints" + str(num_feature) + "//"
     BATCH_SIZE = 200
     PATH = file_path
 
-    dset = SatelliteSet(PATH,num_feature=num_feature,multiple=multiple)
+    dset = SatelliteSet(PATH, num_feature=num_feature, multiple=multiple)
     print(f"Whole data contains {len(dset)} windows.")
     train_dset = torch.utils.data.Subset(dset, range(round(len(dset) * 0.8)))
     validation_dset = torch.utils.data.Subset(dset, range(round(len(dset) * 0.8), len(dset)))
@@ -170,7 +147,7 @@ def partial_fit(file_path,num_feature=16,multiple=False):
     VAL_BATCH_STEP = 5
     start_train = time.time()
     sgd_params = {
-        "loss": "squared_loss",
+        "loss": "huber",
         "penalty": "l2",
         "shuffle": True,
         "warm_start": True,
@@ -199,6 +176,20 @@ def partial_fit(file_path,num_feature=16,multiple=False):
     rmse = do_validation(reg, validation_loader)
     print(f"Final validation score: RMSE  {rmse}")
 
+
+def fit_raw_once(h5_path, num_feature=4, multiple=True):
+    CHECKPOINT_PATH = "checkpoints16_once"
+    x_data, y_data = get_raw_feature_from_npfile(h5_path)
+    x_train, x_val, y_train, y_val = train_test_split(x_data, y_data, train_size=0.8)
+
+    model = SGDRegressorModel()
+    print("Start fitting the model...")
+    start = time.time()
+    model.fit(x_train, y_train)
+    print(f"Finish fitting in {time.time() - start} seconds.")
+    with open('SGD_4.pkl', 'wb') as f:
+        pickle.dump(model, f)
+
 if __name__ == "__main__":
-    h5_path = r"D:\II_LAB2_DATA\c20"
-    partial_fit(h5_path, num_feature=20,multiple=True)
+    h5_path = r"D:\II_LAB2_DATA\data_features_c4_pic3.hdf5"
+    partial_fit(h5_path, multiple=False, num_feature=4)
