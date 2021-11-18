@@ -15,17 +15,19 @@ import pickle
 
 def batch_data_preprocess(x, y):
     x = np.transpose(x, (0, 2, 3, 1))
-    x_flat = x.reshape(-1, 1, x.shape[-1])
+    x_flat = x.reshape(-1, x.shape[-1])
     y_flat = y.reshape(-1, 1)
     del x, y
-    x_data = x_flat[np.where(y_flat != -1)]
-    y_data = y_flat[y_flat != -1].reshape(-1, 1)
-    del x_flat, y_flat
+    # x_data = x_flat[np.where(y_flat != -1)]
+    # y_data = y_flat[y_flat != -1].reshape(-1, 1)
+    # del x_flat, y_flat
 
     # Standardization (to make data zero mean and unit variance)
-    x_scaled = standardize_data(x_data)
-    del x_data
-    return x_scaled, y_data.numpy()
+    x_scaled = standardize_data(x_flat)
+    print(x_scaled.shape)
+    print(y_flat.shape)
+    del x_flat
+    return x_scaled, y_flat.numpy()
 
 
 def train_process(model, x, y, xgb_params):
@@ -46,17 +48,22 @@ def do_validation_xgb(model, dataloader):
     y_predict = np.empty((0, 224, 224))
     for x_val, y_val in dataloader:
         count += 1
-        x_val, y_val = batch_data_preprocess(x_val, y_val)
-        y_val_pred = model.predict(xgb.DMatrix(x_val))
-        y_val_pred = np.reshape(y_val_pred,(-1,224,224))
+        x_scaled, y_flat = batch_data_preprocess(x_val, y_val)
+        y_val_pred = model.predict(xgb.DMatrix(x_scaled))
+        y_val_pred = np.reshape(y_val_pred, (-1, 224, 224))
+        y_val_pred = y_val_pred[np.where(y_val==-1,-1,y_val_pred)]
         del x_val
-        MSE += metrics.mean_squared_error(y_true=y_val, y_pred=y_val_pred, squared=False)
+        y_score_gt = y_flat[y_flat != -1]
+        y_score_pred = y_val_pred[y_flat != -1]
+        MSE += metrics.mean_squared_error(y_true=y_score_gt, y_pred=y_score_pred, squared=False)
         y_predict = np.append(y_predict, y_val_pred)
         if count == 1:
             with open("first_batch_test.npy", "wb") as f:
                 np.save(f, y_val_pred)
                 np.save(f, y_predict)
             print("save first batch test")
+        else:
+            return
         del y_val_pred, y_val
     RMSE = math.sqrt(MSE/count)
     return RMSE, y_predict
@@ -81,13 +88,10 @@ def do_validation(model, dataloader):
 
 
 if __name__ == "__main__":
+    test_data = r"D:\II_LAB2_DATA\data_test_features_c16_pic1.hdf5"
+    ckp_path = r""
+    pred_res_path = r""
     num_features = 16
-    regressor = "XGB"
-    imageIdx = 1
-    test_data = f"data/data_test_features_c{num_features}_pic{imageIdx}.hdf5"
-    ckp_path = f"checkpoints{num_features}/{regressor}_last.pkl"
-    pred_res_path = f"result/checkpoint{num_features}"
-
     BATCH_SIZE = 200
     test_dset = SatelliteSet(test_data,
                              num_feature=num_features,
@@ -120,14 +124,14 @@ if __name__ == "__main__":
      """
 
     # single file
-    # ckp_path = r"D:\yurjia\ImageInterpretation_Regression\code\checkpoints32\XGB_checkpoint.pkl"
-    MODEL_TITLE = ckp_path.split("/")[-1].split(".")[0]+"-"+test_data.split("/")[-1].split(".")[0]
+    ckp_path = r"D:\yurjia\ImageInterpretation_Regression\code\checkpoints16\XGB_checkpoint.pkl"
+    MODEL_TITLE = "XGB_16"
     print(MODEL_TITLE)
     with open(ckp_path, "rb") as file:
         reg = pickle.load(file)
     print("Finished model loading.")
     start = time.time()
-    if regressor[:3] == "XGB":
+    if MODEL_TITLE[:3] == "XGB":
         rmse, y_pred = do_validation_xgb(reg, test_loader)
     else:
         rmse, y_pred = do_validation(reg, test_loader)
