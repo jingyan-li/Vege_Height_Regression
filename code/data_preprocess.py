@@ -19,7 +19,7 @@ def remove_cloud(cloud, rgb, nir, CLOUD_THRESHOLD = 0):
         if np.sum(rgb[i] <= 1) / (rgb[0].shape[0] * rgb[0].shape[1]) > 0.2:
             ignored_rotation_idx.append(i)
     # Get preserved rotations
-    preserved_rotation_idx = [idx for idx in range(20 ) if idx not in ignored_rotation_idx]
+    preserved_rotation_idx = [idx for idx in range(20) if idx not in ignored_rotation_idx]
     print(f"Preserved rotations: {preserved_rotation_idx}")
     # Count no cloud rotations
     no_cld_freq = np.zeros((cloud.shape[1], cloud.shape[2]))
@@ -40,7 +40,7 @@ def remove_cloud(cloud, rgb, nir, CLOUD_THRESHOLD = 0):
 
 if __name__ == "__main__":
 
-    dset = h5py.File("../data/dataset_rgb_nir_train.hdf5","r")
+    dset = h5py.File(f"D:\jingyli\ImageInterpretation_Regression\data\dataset_rgb_nir_train.hdf5","r")
     CLOUDNAME = "CLD_"
     LAYERNAMES = ["INPT","NIR"]
 

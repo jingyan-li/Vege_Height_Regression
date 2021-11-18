@@ -191,5 +191,5 @@ def fit_raw_once(h5_path, num_feature=4, multiple=True):
         pickle.dump(model, f)
 
 if __name__ == "__main__":
-    h5_path = r"D:\II_LAB2_DATA\data_features_c4_pic3.hdf5"
+    h5_path = r"D:\jingyli\ImageInterpretation_Regression\data\data_c16_p1_update.hdf5"
     partial_fit(h5_path, multiple=False, num_feature=4)
