@@ -103,11 +103,11 @@ class SatelliteSet(VisionDataset):
         self.wsize = windowsize
         self.file_path = dfile_path
         self.sh_x, self.sh_y = 224, 224  # size of each image
-        self.feat_window = 2500
+        self.feat_window = 1250
         self.multiple = multiple
         self.num_feature = num_feature
         if multiple:
-            self.num_windows = 4 * self.feat_window
+            self.num_windows = 8 * self.feat_window
         else:
             self.num_windows = self.feat_window
 
@@ -115,7 +115,7 @@ class SatelliteSet(VisionDataset):
         if self.multiple:
             num_pic = index//self.feat_window
             # file = "D:\II_LAB2_DATA\c16\data_features_c16_pic"+ str(num_pic+1) + ".hdf5"
-            file = "D:\II_LAB2_DATA\c" + str(self.num_feature) + "\data_features_c" + str(self.num_feature) +"_pic" + str(num_pic + 1) + ".hdf5"
+            file = "D:\jingyli\ImageInterpretation_Regression\data\c" + str(self.num_feature) + "\data_c" + str(self.num_feature) +"_p" + str(num_pic + 1) + "_update.hdf5"
             feat_set = h5py.File(file, 'r')
             features = feat_set["Features"]
             GT = feat_set["GT"]
