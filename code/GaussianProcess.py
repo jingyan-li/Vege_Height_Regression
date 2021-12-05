@@ -4,7 +4,7 @@ from sklearn.gaussian_process.kernels import *
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn import metrics
 
-from DataPreprocess import standardize_data
+from utils.DataPreprocess import standardize_data
 
 
 class GPModel(object):
@@ -33,6 +33,8 @@ class GPModel(object):
         :param x:
         :return:
         """
+
+        x = standardize_data(x)
         gp_mean = np.zeros(x.shape[0], dtype=float)
 
         gp_mean = self.model.predict(x)
@@ -49,3 +51,6 @@ class GPModel(object):
         MAE = metrics.mean_absolute_error(y_true=y_gt, y_pred=y_pred)
         RMSE = metrics.mean_squared_error(y_true=y_gt, y_pred=y_pred, squared=False)
         return MAE, RMSE
+
+
+    
