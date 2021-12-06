@@ -14,6 +14,8 @@ Open conda prompt and go the project directory. Then use `conda env create -f en
 
 ./preprocess_evaluation -- data preprocess and result evaluation
 
+./feature_extraction -- using pre-trained network to extract features
+
 ./utils -- dataset for pre-trained network and shallow predictor
 
 KNN.py
