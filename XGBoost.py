@@ -2,7 +2,7 @@ import torch.utils.data
 import xgboost as xgb
 import time
 import numpy as np
-from utils.DataPreprocess import standardize_data, get_pretrained_feature_from_h5, SatelliteSet
+from utils.ShallowRegressDataset import standardize_data, get_pretrained_feature_from_h5, SatelliteSet
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
@@ -16,8 +16,42 @@ class XGBModel(object):
         # a random number generator for reproducibility
         self.rng = np.random.default_rng(seed=0)
 
+        # xgb_params = {
+        #     'objective': "reg:linear",
+        #
+        #     'num_class': 3,
+        #     'silent': True,
+        #     'learning_rate': 0.1,
+        #     # 'updater': 'refresh',
+        #     # 'process_type': 'update',
+        #     'refresh_leaf': True,
+        #     # 'reg_lambda': 3,  # L2
+        #     # 'reg_alpha': 3,  # L1
+        #     'max_depth': 5,
+        #     'eta': 0.8
+        # }
+        #
+        # self.model = xgb.train()
+
+        # self.model = xgb.XGBRegressor(max_depth=8,
+        #                               learning_rate=0.3,
+        #                               n_estimators=75,
+        #                               silent=True,
+        #                               objective='reg:squarederror',
+        #                               nthread=-1,
+        #                               gamma=0,
+        #                               min_child_weight=3,
+        #                               max_delta_step=0,
+        #                               subsample=0.85,
+        #                               colsample_bytree=0.7,
+        #                               colsample_bylevel=1,
+        #                               reg_alpha=0,
+        #                               reg_lambda=1,
+        #                               scale_pos_weight=1,
+        #                               seed=1440,
+        #                               missing=None)
         self.model = xgb.XGBRegressor(max_depth=8,
-                                      learning_rate=0.001,
+                                      learning_rate=0.5,
                                       n_estimators=100,
                                       silent=True,
                                       objective='reg:squarederror',
@@ -133,6 +167,7 @@ def train_process(model, x, y, xgb_params):
 
 def do_validation(model, dataloader):
     # Validation score
+    cof_mat = np.zeros((3, 3))
     for x_val, y_val in dataloader:
         x_val, y_val = batch_data_preprocess(x_val, y_val)
         y_val_pred = model.predict(xgb.DMatrix(x_val))
@@ -150,8 +185,8 @@ def partial_fit(file_path, multiple=True, num_features=16):
     xgb_params = {
         'objective': "reg:squarederror",
         'learning_rate': 0.001,
-        'max_depth': 3,
-        'min_child_weight': 1
+        'max_depth': 8,
+        'min_child_weight': 3
     }
 
     dset = SatelliteSet(PATH, multiple=multiple, num_feature=num_features)
@@ -198,5 +233,5 @@ def partial_fit(file_path, multiple=True, num_features=16):
 
 
 if __name__ == "__main__":
-    h5_path = r"D:\II_LAB2_DATA\c16"
-    partial_fit(h5_path, multiple=True, num_features=16)
+    h5_path = r"D:\II_LAB2_DATA\c20"
+    partial_fit(h5_path, multiple=True, num_features=20)

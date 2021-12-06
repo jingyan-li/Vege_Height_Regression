@@ -10,3 +10,19 @@ Image Interpretation Lab 2 Regression
 Open conda prompt and go the project directory. Then use `conda env create -f env.yml`.
 
 
+## Code Structure
+
+./preprocess_evaluation -- data preprocess and result evaluation
+
+./utils -- dataset for pre-trained network and shallow predictor
+
+KNN.py
+
+GaussianProcess.py
+
+SGDRegressor.py
+
+XGBoost.py -- shallow predictor
+
+predict.py -- make predictions on test dataset
+

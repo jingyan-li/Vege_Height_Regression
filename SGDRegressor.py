@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.linear_model import SGDRegressor
 import torch.utils.data
 import time
-from utils.DataPreprocess import standardize_data, get_pretrained_feature_from_h5, SatelliteSet, get_raw_feature_from_npfile
+from utils.ShallowRegressDataset import standardize_data, get_pretrained_feature_from_h5, SatelliteSet
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
@@ -10,7 +10,6 @@ import os
 import pickle
 import math
 from sklearn.model_selection import GridSearchCV
-
 
 class SGDRegressorModel(object):
     def __init__(self):
@@ -33,6 +32,7 @@ class SGDRegressorModel(object):
         :param train_y: Training canopy height as a 1d Numpy array of shape(NUM_SAMPLESM,)
         """
         train_x = standardize_data(train_x)
+
         self.model.fit(train_x, train_y)
 
     def predict(self, x):
@@ -59,23 +59,24 @@ class SGDRegressorModel(object):
         return MAE, RMSE
 
 
-def batch_data_preprocess(x, y):
+def batch_data_preprocess(x, y, threshold):
     x = np.transpose(x, (0, 2, 3, 1))
     x_flat = x.reshape(-1, 1, x.shape[-1])
     y_flat = y.reshape(-1, 1)
     del x, y
-    x_data = x_flat[np.where(y_flat != -1)]
-    y_data = y_flat[y_flat != -1].reshape(-1, 1)
+    x_data = x_flat[np.where(y_flat > threshold)]
+    y_data = y_flat[y_flat > threshold].reshape(-1, 1)
     del x_flat, y_flat
 
     # Standardization (to make data zero mean and unit variance)
-    x_scaled = standardize_data(x_data)
+    # x_scaled = standardize_data(x_data)
+    x_scaled = x_data
     del x_data
     return x_scaled, y_data.numpy()
 
 
-def train_process(model, x, y):
-    x, y = batch_data_preprocess(x, y)
+def train_process(model, x, y, threshold):
+    x, y = batch_data_preprocess(x, y, threshold)
     # Train
     model.partial_fit(x, y)
     # Train score
@@ -85,13 +86,13 @@ def train_process(model, x, y):
     return model, train_score
 
 
-def do_validation(model, dataloader):
+def do_validation(model, dataloader,threshold):
     # Validation score
     MSE = 0
     count = 0
     for x_val, y_val in dataloader:
         count += 1
-        x_val, y_val = batch_data_preprocess(x_val, y_val)
+        x_val, y_val = batch_data_preprocess(x_val, y_val, threshold=threshold)
         y_val_pred = model.predict(x_val)
         del x_val
         MSE += metrics.mean_squared_error(y_true=y_val, y_pred=y_val_pred)
@@ -99,10 +100,8 @@ def do_validation(model, dataloader):
     RMSE = math.sqrt(MSE / count)
     return RMSE
 
-
-def fit_once(h5_path, num_feature=16, multiple=True):
-    CHECKPOINT_PATH = "checkpoints16_once"
-    x_data, y_data = get_pretrained_feature_from_h5(h5_path, num_feature=num_feature, multiple=multiple)
+def fit_once(h5_path, num_feature=16):
+    x_data, y_data = get_pretrained_feature_from_h5(h5_path, num_feature=num_feature)
     x_train, x_val, y_train, y_val = train_test_split(x_data, y_data, train_size=0.8)
 
     model = SGDRegressorModel()
@@ -114,19 +113,23 @@ def fit_once(h5_path, num_feature=16, multiple=True):
     start = time.time()
     y_pred = model.predict(x_val)
     print(f"Finish predicting in {time.time() - start} seconds.")
-
     mae, rmse = model.evaluation(y_val, y_pred)
     print("Validation: MAE {}, RMSE {}".format(mae, rmse))
-    with open(os.path.join(CHECKPOINT_PATH, 'SGD.pkl'), 'wb') as f:
-        pickle.dump(model, f)
 
 
-def partial_fit(file_path, num_feature=16, multiple=False):
-    CHECKPOINT_PATH = "checkpoints" + str(num_feature) + "//"
-    BATCH_SIZE = 200
+def partial_fit(file_path,windowsize,num_feature=16,multiple=False):
+    CHECKPOINT_PATH = f"./checkpoints{num_feature}_unstand_filter0"
+    if not os.path.exists(CHECKPOINT_PATH):
+        os.mkdir(CHECKPOINT_PATH)
+    BATCH_SIZE = 200*14*14*2
+    filter_threshold = 0
     PATH = file_path
 
-    dset = SatelliteSet(PATH, num_feature=num_feature, multiple=multiple)
+    dset = SatelliteSet(PATH,
+                        feature_windows=235984,
+                        num_feature=num_feature,
+                        multiple=multiple,
+                        windowsize=windowsize)
     print(f"Whole data contains {len(dset)} windows.")
     train_dset = torch.utils.data.Subset(dset, range(round(len(dset) * 0.8)))
     validation_dset = torch.utils.data.Subset(dset, range(round(len(dset) * 0.8), len(dset)))
@@ -147,7 +150,7 @@ def partial_fit(file_path, num_feature=16, multiple=False):
     VAL_BATCH_STEP = 5
     start_train = time.time()
     sgd_params = {
-        "loss": "huber",
+        "loss": "squared_error",
         "penalty": "l2",
         "shuffle": True,
         "warm_start": True,
@@ -157,7 +160,7 @@ def partial_fit(file_path, num_feature=16, multiple=False):
     batch_count = 0
     print("Start fitting the model...")
     for x, y in tqdm(train_loader):
-        reg, score = train_process(reg, x, y)
+        reg, score = train_process(reg, x, y, filter_threshold)
         if score < best_score:
             print(score)
             best_score = score
@@ -168,30 +171,14 @@ def partial_fit(file_path, num_feature=16, multiple=False):
         if batch_count % TRAIN_BATCH_STEP == 0:
             print(f"Batch {batch_count} train accuracy: {score}")
         if batch_count % VAL_BATCH_STEP == 0:
-            rmse = do_validation(reg, validation_loader)
+            rmse = do_validation(reg, validation_loader, filter_threshold)
             print(f"Batch {batch_count} validation score: \nrmse - {rmse}")
     print(f"Training time: {time.time() - start_train}")
     with open(os.path.join(CHECKPOINT_PATH, 'PartialFitSGD_last.pkl'), 'wb') as f:
         pickle.dump(reg, f)
-    rmse = do_validation(reg, validation_loader)
+    rmse = do_validation(reg, validation_loader, filter_threshold)
     print(f"Final validation score: RMSE  {rmse}")
 
-
-def fit_raw_once(h5_path, num_feature=4, multiple=True):
-    CHECKPOINT_PATH = "checkpoints16_once"
-    x_data, y_data = get_raw_feature_from_npfile(h5_path)
-    x_train, x_val, y_train, y_val = train_test_split(x_data, y_data, train_size=0.8)
-
-    model = SGDRegressorModel()
-    print("Start fitting the model...")
-    start = time.time()
-    model.fit(x_train, y_train)
-    print(f"Finish fitting in {time.time() - start} seconds.")
-    with open('SGD_4.pkl', 'wb') as f:
-        pickle.dump(model, f)
-
 if __name__ == "__main__":
-    # for i in range(1,9):
-    #     h5_path = r"D:\jingyli\ImageInterpretation_Regression\data\data_c16_p"+str(i)+"_update.hdf5"
-    h5_path = ""
-    partial_fit(h5_path, multiple=True, num_feature=16)
+    h5_path = r"D:\jingyli\ImageInterpretation_Regression\data"
+    partial_fit(h5_path, windowsize=16, num_feature=8,multiple=True)

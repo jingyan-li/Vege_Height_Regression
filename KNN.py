@@ -1,3 +1,7 @@
+'''
+KNN as one of baselines
+'''
+
 from sklearn.neighbors import KNeighborsRegressor
 import time
 import numpy as np
@@ -7,7 +11,7 @@ import pandas as pd
 import h5py
 from sklearn.model_selection import train_test_split
 
-from utils.DataPreprocess import standardize_data
+from utils.ShallowRegressDataset import standardize_data
 from utils.dataset_windows import SatelliteSet
 
 
@@ -106,19 +110,6 @@ def main():
     print("Finish predicting in {} seconds.".format(time.time() - start))
     mae, rmse = model.evaluation(y_val, y_pred)
     print("Validation: MAE {}, RMSE {}".format(mae, rmse))
-
-    # neigh = KNeighborsRegressor(n_neighbors=5)
-    # start = time.time()
-    # neigh.fit(x_train, y_train)
-    # print(f"Finish fitting in {time.time() - start} seconds.")
-    # y_pred = neigh.predict(x_val)
-    # mae = metrics.mean_absolute_error(y_true=y_val,y_pred=y_pred)
-    # RMSE = metrics.mean_squared_error(y_true=y_val, y_pred=y_pred, squared=False)
-    # print(mae)
-    # print(RMSE)
-    # print("Start fitting the model...")
-    # start = time.time()
-    # print(f"Finish fitting in {time.time() - start} seconds.")
 
 
 if __name__ == "__main__":

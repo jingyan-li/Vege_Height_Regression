@@ -1,1 +1,9 @@
+/data/
+*.hdf5
 .idea/
+*.npy
+*.npz
+*.npz
+*.pdf
+*.npz
+batch1_test.npz
